@@ -1,2 +1,0 @@
-# laurier_computing_society_hackathon_2026
-Laurier Computing Society Hackathon 2026
