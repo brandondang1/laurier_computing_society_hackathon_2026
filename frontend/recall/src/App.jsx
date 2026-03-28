@@ -6,11 +6,12 @@ const App = () => {
   const [tool, setTool] = useState('pen');
   const [lines, setLines] = useState([]);
   const isDrawing = useRef(false);
+  const [color, setColor] = useState('red')
 
   const handleMouseDown = (e) => {
     isDrawing.current = true;
     const pos = e.target.getStage().getPointerPosition();
-    setLines([...lines, { tool, points: [pos.x, pos.y] }]);
+    setLines([...lines, { tool, points: [pos.x, pos.y], color}]);
   };
 
 
@@ -35,6 +36,11 @@ const App = () => {
     isDrawing.current = false;
   };
 
+  const handleColor = (e) => {
+    setColor(e.target.value)
+  };
+
+
   return (
      <div>
       <select
@@ -46,6 +52,15 @@ const App = () => {
         <option value="pen">Pen</option>
         <option value="eraser">Eraser</option>
       </select>
+
+
+      <input
+      type="color"
+      id="colorPicker"
+      value={color}
+      onChange={handleColor}
+      />
+
       <Stage
         width={window.innerWidth}
         height={window.innerHeight}
@@ -62,7 +77,7 @@ const App = () => {
             <Line
               key={i}
               points={line.points}
-              stroke="#df4b26"
+              stroke={line.color}
               strokeWidth={5}
               tension={0.5}
               lineCap="round"
