@@ -6,12 +6,14 @@ const App = () => {
   const [tool, setTool] = useState('pen');
   const [lines, setLines] = useState([]);
   const isDrawing = useRef(false);
-  const [color, setColor] = useState('red')
+  const [color, setColor] = useState('red');
+  const [redo, setRedo] = useState([]);
 
   const handleMouseDown = (e) => {
     isDrawing.current = true;
     const pos = e.target.getStage().getPointerPosition();
     setLines([...lines, { tool, points: [pos.x, pos.y], color}]);
+    setRedo([]);
   };
 
 
@@ -40,6 +42,26 @@ const App = () => {
     setColor(e.target.value)
   };
 
+  const clearBoard = () => {
+    setLines([])
+  };
+
+  const handleUndo = () => {
+    if (lines.length == 0) return;
+
+    setRedo(prevLines => [...prevLines, lines[lines.length - 1]]);
+
+    setLines(prevLines => prevLines.slice(0, prevLines.length - 1));
+
+  };
+
+  const handleRedo = () => {
+    if (length.redo == 0) return;
+
+    setLines (prevLines => [...prevLines, redo[redo.length - 1]]);
+
+    setRedo (prevLines => prevLines.slice(0, prevLines.length -1));
+  }
 
   return (
      <div>
@@ -60,6 +82,28 @@ const App = () => {
       value={color}
       onChange={handleColor}
       />
+
+      <button
+      id="clearButton"
+      onClick={clearBoard}
+      >
+      Clear Board
+      </button>
+
+      <button
+      id="undoButton"
+      onClick={handleUndo}
+      >
+      Undo
+      </button>
+
+      <button
+      id="redoButton"
+      onClick={handleRedo}
+      >
+      Redo
+      </button>
+
 
       <Stage
         width={window.innerWidth}
