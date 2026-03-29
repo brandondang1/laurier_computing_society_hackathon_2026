@@ -408,29 +408,45 @@ export default function App() {
                  shadowColor="rgba(0,0,0,0.2)"
                  listening={false} 
               />
+              {/* A4 Border */}
               <Rect 
                  x={0} y={0} width={A4_WIDTH} height={A4_HEIGHT} 
                  stroke="#cbd5e1"
                  strokeWidth={1}
                  listening={false} 
               />
-              
+
+              {/* Page Separators */}
+              <Line
+                points={[0, A4_PAGE_HEIGHT, A4_WIDTH, A4_PAGE_HEIGHT]}
+                stroke="#e2e8f0"
+                strokeWidth={2}
+                dash={[10, 5]}
+                listening={false}
+              />
+              <Line
+                points={[0, A4_PAGE_HEIGHT * 2, A4_WIDTH, A4_PAGE_HEIGHT * 2]}
+                stroke="#e2e8f0"
+                strokeWidth={2}
+                dash={[10, 5]}
+                listening={false}
+              />
+
               {shapes.map((shape) => {
                 if (shape.type === 'pencil' || shape.type === 'eraser') {
                   return (
                     <Line
                       key={shape.id}
                       points={shape.points}
-                      stroke={shape.color}
+                      stroke={shape.type === 'eraser' ? '#ffffff' : shape.color}
                       strokeWidth={shape.strokeWidth}
                       tension={0.5}
                       lineCap="round"
                       lineJoin="round"
-                      globalCompositeOperation={shape.type === 'eraser' ? 'destination-out' : 'source-over'}
+                      globalCompositeOperation="source-over"
                     />
                   );
-                } else if (shape.type === 'rect') {
-                  return (
+                } else if (shape.type === 'rect') {                  return (
                     <Rect
                       key={shape.id}
                       x={shape.x}
