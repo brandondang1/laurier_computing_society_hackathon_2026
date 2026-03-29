@@ -1,11 +1,11 @@
 Install instructions,
 
 Frontend:
-npm install
+npm install <br />
 npm run dev
 
 Backend:
-npm install
+npm install <br />
 npm start
 
 For this project we used the React framework, tailwind for CSS styling, react-konva for the canvas and drawing graphics, Lucide react for the icon libraries.
