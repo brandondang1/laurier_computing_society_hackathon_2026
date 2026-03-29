@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function LandingPage({ roomId, setRoomId, joinRoom }) {
+export default function LandingPage({ roomId, setRoomId, username, setUsername, joinRoom }) {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-slate-100 p-4">
       <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-2xl text-center border border-slate-200">
@@ -13,6 +13,21 @@ export default function LandingPage({ roomId, setRoomId, joinRoom }) {
         <p className="text-slate-500 mb-8">Collaborative Real-time Whiteboard</p>
         
         <form onSubmit={joinRoom} className="space-y-4">
+          <div className="text-left">
+            <label htmlFor="username" className="block text-sm font-medium text-slate-700 mb-1 ml-1">
+              Username
+            </label>
+            <input
+              id="username"
+              type="text"
+              placeholder="Your name"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 text-slate-900"
+              required
+            />
+          </div>
+
           <div className="text-left">
             <label htmlFor="room-id" className="block text-sm font-medium text-slate-700 mb-1 ml-1">
               Room ID

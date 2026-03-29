@@ -19,32 +19,43 @@ const rooms = new Map();
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  socket.on('join_room', (roomId) => {
+  socket.on('join_room', (data) => {
+    const { roomId, username } = data;
     socket.join(roomId);
+    socket.username = username;
 
     let room = rooms.get(roomId);
     if (!room) {
       room = {
         id: roomId,
         hostId: socket.id,
+        hostName: username,
         shapes: [],
-        camera: { x: 0, y: 0, scale: 1 }
+        camera: { x: 0, y: 0, scale: 1 },
+        users: []
       };
       rooms.set(roomId, room);
     } else if (!room.hostId) {
       room.hostId = socket.id;
+      room.hostName = username;
     }
+
+    // Add user to room list
+    if (!room.users) room.users = [];
+    room.users.push({ id: socket.id, username });
 
     // Send current room state to the user
     socket.emit('room_state', {
       shapes: room.shapes,
       hostId: room.hostId,
+      hostName: room.hostName,
       camera: room.camera,
-      isHost: room.hostId === socket.id
+      isHost: room.hostId === socket.id,
+      users: room.users
     });
 
     // Notify others
-    socket.to(roomId).emit('user_joined', { userId: socket.id });
+    socket.to(roomId).emit('user_joined', { userId: socket.id, username });
   });
 
   socket.on('draw_shape', (data) => {

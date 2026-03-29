@@ -17,6 +17,7 @@ let socket;
 
 export default function App() {
   const [roomId, setRoomId] = useState('');
+  const [username, setUsername] = useState('');
   const [inRoom, setInRoom] = useState(false);
   const [isHost, setIsHost] = useState(false);
   const [shapes, setShapes] = useState([]);
@@ -112,8 +113,8 @@ export default function App() {
 
   const joinRoom = (e) => {
     e.preventDefault();
-    if (roomId.trim()) {
-      socket.emit('join_room', roomId.trim());
+    if (roomId.trim() && username.trim()) {
+      socket.emit('join_room', { roomId: roomId.trim(), username: username.trim() });
       setInRoom(true);
     }
   };
@@ -258,6 +259,8 @@ export default function App() {
       <LandingPage 
         roomId={roomId} 
         setRoomId={setRoomId} 
+        username={username}
+        setUsername={setUsername}
         joinRoom={joinRoom} 
       />
     );
