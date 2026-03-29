@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { 
   Pencil, Square, Circle as CircleIcon, Eraser, 
   Hand, MonitorUp, EyeOff, Eye, Trash2, LogOut,
-  Download
+  Download, Undo, Redo, PenTool
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import LandingPage from './components/LandingPage';
@@ -24,6 +24,7 @@ export default function App() {
   const [isHost, setIsHost] = useState(false);
   const [shapes, setShapes] = useState([]);
   const [users, setUsers] = useState([]);
+  const [allowedDrawers, setAllowedDrawers] = useState([]);
   const [camera, setCamera] = useState({ x: 0, y: 0, scale: 1 });
   
   const [tool, setTool] = useState('pencil');
@@ -40,6 +41,8 @@ export default function App() {
 
   const SIDEBAR_WIDTH = 260;
 
+  const canDraw = isHost || allowedDrawers.includes(socket?.id);
+
   const leaveRoom = () => {
     socket.emit('leave_room', roomId);
     setInRoom(false);
@@ -48,6 +51,7 @@ export default function App() {
     setShapes([]);
     setUsers([]);
     setIsHost(false);
+    setAllowedDrawers([]);
   };
 
   const downloadPDF = () => {
@@ -131,11 +135,20 @@ export default function App() {
       setShapes(state.shapes);
       setIsHost(state.isHost);
       setUsers(state.users || []);
+      setAllowedDrawers(state.allowedDrawers || []);
       const clampedHostCam = clampCamera(state.camera);
       setHostCamera(clampedHostCam);
       if (state.isHost || isLinked) {
         setCamera(clampedHostCam);
       }
+    });
+
+    socket.on('room_state_update', (newShapes) => {
+      setShapes(newShapes);
+    });
+
+    socket.on('permissions_updated', (drawers) => {
+      setAllowedDrawers(drawers);
     });
 
     socket.on('room_users', (userList) => {
@@ -239,7 +252,7 @@ export default function App() {
   };
 
   const handleMouseDown = (e) => {
-    if (!isHost) return;
+    if (!canDraw) return;
     if (tool === 'pan') return;
 
     const pos = getRelativePointerPosition(e.target.getStage());
@@ -275,7 +288,7 @@ export default function App() {
   };
 
   const handleMouseMove = (e) => {
-    if (!isHost || !isDrawing || !currentShapeRef.current) return;
+    if (!canDraw || !isDrawing || !currentShapeRef.current) return;
 
     const pos = getRelativePointerPosition(e.target.getStage());
     const id = currentShapeRef.current.id;
@@ -308,7 +321,7 @@ export default function App() {
   };
 
   const handleMouseUp = () => {
-    if (!isHost || !isDrawing || !currentShapeRef.current) return;
+    if (!canDraw || !isDrawing || !currentShapeRef.current) return;
     setIsDrawing(false);
     
     socket.emit('update_shape', { roomId, shape: currentShapeRef.current });
@@ -316,9 +329,21 @@ export default function App() {
   };
 
   const clearCanvas = () => {
-    if (isHost) {
+    if (canDraw) {
       socket.emit('clear_canvas', roomId);
       setShapes([]);
+    }
+  };
+
+  const handleUndo = () => {
+    if (canDraw) {
+      socket.emit('undo', roomId);
+    }
+  };
+
+  const handleRedo = () => {
+    if (canDraw) {
+      socket.emit('redo', roomId);
     }
   };
 
@@ -341,12 +366,12 @@ export default function App() {
         {/* Toolbar */}
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white px-4 py-2 rounded-lg shadow-md flex items-center gap-4 z-10 border border-gray-200">
           <div className="flex items-center gap-2 border-r pr-4 border-gray-300">
-            <span className={`text-sm font-semibold px-2 py-1 rounded ${isHost ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
-              {isHost ? 'Host' : 'Viewer'}
+            <span className={`text-sm font-semibold px-2 py-1 rounded ${isHost ? 'bg-blue-100 text-blue-700' : (canDraw ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700')}`}>
+              {isHost ? 'Host' : (canDraw ? 'Drawer' : 'Viewer')}
             </span>
           </div>
 
-          {isHost ? (
+          {canDraw ? (
             <>
               <button onClick={() => setTool('pan')} className={`p-2 rounded ${tool === 'pan' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'}`} title="Pan"><Hand size={20}/></button>
               <button onClick={() => setTool('pencil')} className={`p-2 rounded ${tool === 'pencil' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'}`} title="Pencil"><Pencil size={20}/></button>
@@ -354,6 +379,13 @@ export default function App() {
               <button onClick={() => setTool('circle')} className={`p-2 rounded ${tool === 'circle' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'}`} title="Circle"><CircleIcon size={20}/></button>
               <button onClick={() => setTool('eraser')} className={`p-2 rounded ${tool === 'eraser' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'}`} title="Eraser"><Eraser size={20}/></button>
               
+              <div className="w-px h-6 bg-gray-300 mx-1"></div>
+              
+              <button onClick={handleUndo} className="p-2 rounded text-gray-700 hover:bg-gray-100" title="Undo"><Undo size={20}/></button>
+              <button onClick={handleRedo} className="p-2 rounded text-gray-700 hover:bg-gray-100" title="Redo"><Redo size={20}/></button>
+
+              <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
               <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-8 h-8 cursor-pointer rounded" title="Color" />
               <input type="range" min="1" max="20" value={strokeWidth} onChange={(e) => setStrokeWidth(Number(e.target.value))} className="w-24" title="Stroke Width" />
               
@@ -392,7 +424,7 @@ export default function App() {
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
-            draggable={isHost ? tool === 'pan' : true}
+            draggable={canDraw ? tool === 'pan' : true}
             onDragStart={handleDragStart}
             onDragMove={handleDragMove}
             x={camera.x}
@@ -526,14 +558,28 @@ export default function App() {
                   }`}>
                     {user.username.charAt(0).toUpperCase()}
                   </div>
-                  <div className="flex flex-col min-w-0 items-start overflow-hidden">
+                  <div className="flex flex-col min-w-0 items-start overflow-hidden flex-1">
                     <span className={`text-sm font-semibold truncate w-full text-left ${user.id === socket?.id ? 'text-blue-600' : 'text-slate-700'}`}>
                       {user.username} {user.id === socket?.id && '(You)'}
                     </span>
-                    {user.id === users[0]?.id && (
-                      <span className="text-[10px] font-bold text-amber-600 uppercase tracking-tighter leading-none bg-amber-50 px-1 rounded">Host</span>
-                    )}
+                    <div className="flex gap-1 items-center mt-1">
+                      {user.id === users[0]?.id && (
+                        <span className="text-[10px] font-bold text-amber-600 uppercase tracking-tighter leading-none bg-amber-50 px-1 py-0.5 rounded">Host</span>
+                      )}
+                      {allowedDrawers.includes(user.id) && user.id !== users[0]?.id && (
+                        <span className="text-[10px] font-bold text-purple-600 uppercase tracking-tighter leading-none bg-purple-50 px-1 py-0.5 rounded">Drawer</span>
+                      )}
+                    </div>
                   </div>
+                  {isHost && user.id !== socket?.id && (
+                    <button 
+                      onClick={() => socket.emit('toggle_draw_permission', { roomId, userId: user.id })}
+                      className={`p-1.5 rounded-md transition-colors ${allowedDrawers.includes(user.id) ? 'text-purple-600 bg-purple-50 hover:bg-purple-100' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+                      title={allowedDrawers.includes(user.id) ? "Revoke drawing permission" : "Grant drawing permission"}
+                    >
+                      <PenTool size={14} />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
