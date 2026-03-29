@@ -10,7 +10,8 @@ import LandingPage from './components/LandingPage';
 
 const SOCKET_URL = 'http://localhost:8080';
 const A4_WIDTH = 794; // ~210mm at 96 DPI
-const A4_HEIGHT = 1123; // ~297mm at 96 DPI
+const A4_PAGE_HEIGHT = 1123; // ~297mm at 96 DPI
+const A4_HEIGHT = A4_PAGE_HEIGHT * 3; // 3 pages long
 
 let socket;
 
