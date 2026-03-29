@@ -56,6 +56,7 @@ io.on('connection', (socket) => {
 
     // Notify others
     socket.to(roomId).emit('user_joined', { userId: socket.id, username });
+    io.to(roomId).emit('room_users', room.users);
   });
 
   socket.on('draw_shape', (data) => {
@@ -93,15 +94,39 @@ io.on('connection', (socket) => {
     }
   });
 
+  const handleLeaveRoom = (socket, roomId) => {
+    const room = rooms.get(roomId);
+    if (room) {
+      // Remove user from the list
+      room.users = room.users.filter(u => u.id !== socket.id);
+      
+      if (room.hostId === socket.id) {
+        // Assign a new host if any users remain
+        if (room.users.length > 0) {
+          const newHost = room.users[0];
+          room.hostId = newHost.id;
+          room.hostName = newHost.username;
+          io.to(roomId).emit('host_changed', { hostId: room.hostId, hostName: room.hostName });
+        } else {
+          // Delete room if empty
+          rooms.delete(roomId);
+        }
+      }
+      
+      // Broadcast updated user list
+      io.to(roomId).emit('room_users', room.users);
+      socket.leave(roomId);
+    }
+  };
+
+  socket.on('leave_room', (roomId) => {
+    handleLeaveRoom(socket, roomId);
+  });
+
   socket.on('disconnecting', () => {
     for (const roomId of socket.rooms) {
       if (roomId !== socket.id) {
-        const room = rooms.get(roomId);
-        if (room && room.hostId === socket.id) {
-          // If host leaves, assign a new host or leave it null
-          room.hostId = null;
-          io.to(roomId).emit('host_left');
-        }
+        handleLeaveRoom(socket, roomId);
       }
     }
   });
