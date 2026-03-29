@@ -1,15 +1,35 @@
-// Node.js backend (Express)
-const express = require('express');
-const cors = require('cors');
+import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
+import cors from 'cors';
 const app = express();
 
-// Enable CORS for React frontend
 app.use(cors());
-
-app.get('/api/data', (req, res) => {
-  res.json({ message: 'Hello from Node!' });
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: '*',
+    }
 });
 
-app.listen(8080, () => {
-  console.log('Server running on port 8080');
-}); 
+io.on('connection', (socket) => {
+    console.log('User connected:', socket.id);
+  
+    socket.on('line', (data) => {
+        console.log(data);
+        socket.broadcast.emit('line', data);
+    });
+  
+    socket.on('undo', (data) => socket.broadcast.emit('undo', data));
+    socket.on('redo', (data) => socket.broadcast.emit('redo', data));
+    socket.on('clear', () => socket.broadcast.emit('clear'));
+
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+    });
+});
+
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
+});
