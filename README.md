@@ -1,10 +1,10 @@
-Install instructions,
+Install instructions <br />
 
-Frontend:
+Frontend: <br />
 npm install <br />
 npm run dev
 
-Backend:
+Backend: <br />
 npm install <br />
 npm start
 
