@@ -2,20 +2,27 @@ import { useState, useRef } from 'react'
 import { Stage, Layer, Line, Text } from 'react-konva';
 import './App.css'
 
+
+
 const App = () => {
   const [tool, setTool] = useState('pen');
   const [lines, setLines] = useState([]);
   const isDrawing = useRef(false);
   const [color, setColor] = useState('red');
   const [redo, setRedo] = useState([]);
+  const stageRef = useRef(null);
+  const [strokeWidth, setStrokeWidth] = useState(5)
+  const [camera, setCamera] = useState({ x: 0, y: 0, scale: 1});
+  const [hostCamera, setHostCamera] = useState({ x: 0, y: 0, scale: 1});
 
   const handleMouseDown = (e) => {
+    if (tool === 'grab') return;
+    
     isDrawing.current = true;
-    const pos = e.target.getStage().getPointerPosition();
-    setLines([...lines, { tool, points: [pos.x, pos.y], color}]);
+    const pos = e.target.getStage().getRelativePointerPosition();
+    setLines([...lines, { tool, points: [pos.x, pos.y], color, strokeWidth}]);
     setRedo([]);
   };
-
 
   const handleMouseMove = (e) => {
     // no drawing - skipping
@@ -23,7 +30,7 @@ const App = () => {
       return;
     }
     const stage = e.target.getStage();
-    const point = stage.getPointerPosition();
+    const point = stage.getRelativePointerPosition();
     let lastLine = lines[lines.length - 1];
     // add point
     lastLine.points = lastLine.points.concat([point.x, point.y]);
@@ -56,11 +63,52 @@ const App = () => {
   };
 
   const handleRedo = () => {
-    if (length.redo == 0) return;
+    if (redo.length == 0) return;
 
     setLines (prevLines => [...prevLines, redo[redo.length - 1]]);
 
     setRedo (prevLines => prevLines.slice(0, prevLines.length -1));
+  }
+
+  const handleWheel = (e) => {
+    e.evt.preventDefault();
+    
+    const stage = stageRef.current;
+    const oldScale = stage.scaleX();
+    const pointer = stage.getPointerPosition();
+
+    const mousePointTo = {
+      x: (pointer.x - stage.x()) / oldScale,
+      y: (pointer.y - stage.y()) / oldScale,
+    };
+
+    let direction = e.evt.deltaY > 0 ? 1 : -1;
+
+    if (e.evt.ctrlKey){
+      direction = -direction;
+    }
+
+    const scaleBy = 1.01;
+    const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+
+    stage.scale({ x: newScale, y: newScale});
+
+    const newPos = {
+      x: pointer.x - mousePointTo.x * newScale,
+      y: pointer.y - mousePointTo.y * newScale,
+    };
+    stage.position(newPos);
+
+    setCamera({ x: newPos.x, y: newPos.y, scale: newScale})
+  };
+
+  const snapCameraBack = () => {
+    const stage = stageRef.current;
+    stage.position({ x: 0, y: 0});
+  }
+
+  const handleDragEnd = (e) => {
+    setCamera({ x: e.target.x(), y: e.target.y(), scale: e.target.scaleX()});
   }
 
   return (
@@ -73,6 +121,7 @@ const App = () => {
       >
         <option value="pen">Pen</option>
         <option value="eraser">Eraser</option>
+        <option value="grab">Grab</option>
       </select>
 
 
@@ -104,6 +153,19 @@ const App = () => {
       Redo
       </button>
 
+      <input 
+      type="range" 
+      min="1" 
+      max="20" 
+      value={strokeWidth} 
+      onChange={(e) => setStrokeWidth(Number(e.target.value))}/>
+
+      <button
+      id="snapButton"
+      onClick={snapCameraBack}
+      >
+      Snap Camera
+      </button>
 
       <Stage
         width={window.innerWidth}
@@ -114,6 +176,10 @@ const App = () => {
         onTouchStart={handleMouseDown}
         onTouchMove={handleMouseMove}
         onTouchEnd={handleMouseUp}
+        onWheel={handleWheel}
+        onDragEnd={handleDragEnd}
+        draggable={tool === 'grab'}
+        ref={stageRef}
       >
         <Layer>
           <Text text="Just start drawing" x={5} y={30} />
@@ -122,7 +188,7 @@ const App = () => {
               key={i}
               points={line.points}
               stroke={line.color}
-              strokeWidth={5}
+              strokeWidth={line.strokeWidth}
               tension={0.5}
               lineCap="round"
               lineJoin="round"
