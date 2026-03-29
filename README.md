@@ -1,10 +1,12 @@
 Install instructions <br />
 
 Frontend: <br />
+from root: cd frontend/recall <br />
 npm install <br />
 npm run dev
 
 Backend: <br />
+from root: cd backend <br />
 npm install <br />
 npm start
 
